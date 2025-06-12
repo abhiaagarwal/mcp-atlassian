@@ -48,14 +48,14 @@ async def main_lifespan(app: FastMCP[MainAppContext]) -> AsyncIterator[dict]:
     if services.get("jira"):
         try:
             jira_config = JiraConfig.from_env()
+            loaded_jira_config = jira_config
             if jira_config.is_auth_configured():
-                loaded_jira_config = jira_config
                 logger.info(
                     "Jira configuration loaded and authentication is configured."
                 )
             else:
-                logger.warning(
-                    "Jira URL found, but authentication is not fully configured. Jira tools will be unavailable."
+                logger.info(
+                    "Jira configuration loaded without authentication; expecting request-specific tokens"
                 )
         except Exception as e:
             logger.error(f"Failed to load Jira configuration: {e}", exc_info=True)
@@ -63,14 +63,14 @@ async def main_lifespan(app: FastMCP[MainAppContext]) -> AsyncIterator[dict]:
     if services.get("confluence"):
         try:
             confluence_config = ConfluenceConfig.from_env()
+            loaded_confluence_config = confluence_config
             if confluence_config.is_auth_configured():
-                loaded_confluence_config = confluence_config
                 logger.info(
                     "Confluence configuration loaded and authentication is configured."
                 )
             else:
-                logger.warning(
-                    "Confluence URL found, but authentication is not fully configured. Confluence tools will be unavailable."
+                logger.info(
+                    "Confluence configuration loaded without authentication; expecting request-specific tokens"
                 )
         except Exception as e:
             logger.error(f"Failed to load Confluence configuration: {e}", exc_info=True)
