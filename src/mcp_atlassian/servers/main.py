@@ -281,6 +281,21 @@ class UserTokenMiddleware(BaseHTTPMiddleware):
                 logger.debug(
                     f"No Authorization header provided for {request.url.path}. Will proceed with global/fallback server configuration if applicable."
                 )
+
+            jira_header = request.headers.get("X-Jira")
+            confluence_header = request.headers.get("X-Confluence")
+            if jira_header:
+                masked = mask_sensitive(jira_header)
+                logger.debug(
+                    f"UserTokenMiddleware.dispatch: X-Jira header detected (masked): {masked}"
+                )
+                request.state.user_jira_pat = jira_header.strip()
+            if confluence_header:
+                masked = mask_sensitive(confluence_header)
+                logger.debug(
+                    f"UserTokenMiddleware.dispatch: X-Confluence header detected (masked): {masked}"
+                )
+                request.state.user_confluence_pat = confluence_header.strip()
         response = await call_next(request)
         logger.debug(
             f"UserTokenMiddleware.dispatch: EXITED for request path='{request.url.path}'"

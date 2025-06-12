@@ -519,6 +519,21 @@ Here's a complete example of setting up multi-user authentication with streamabl
 }
 ```
 
+**Server/Data Center with Separate Jira/Confluence Tokens**
+```json
+{
+  "mcpServers": {
+    "mcp-atlassian-service": {
+      "url": "http://localhost:9000/mcp",
+      "headers": {
+        "X-Jira": "<JIRA_PAT>",
+        "X-Confluence": "<CONFLUENCE_PAT>"
+      }
+    }
+  }
+}
+```
+
 4. Required environment variables in `.env`:
    ```bash
    JIRA_URL=https://your-company.atlassian.net
