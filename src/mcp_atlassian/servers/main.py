@@ -47,7 +47,7 @@ async def main_lifespan(app: FastMCP[MainAppContext]) -> AsyncIterator[dict]:
 
     if services.get("jira"):
         try:
-            jira_config = JiraConfig.from_env()
+            jira_config = JiraConfig.from_env(allow_missing_auth=True)
             loaded_jira_config = jira_config
             if jira_config.is_auth_configured():
                 logger.info(
@@ -62,7 +62,7 @@ async def main_lifespan(app: FastMCP[MainAppContext]) -> AsyncIterator[dict]:
 
     if services.get("confluence"):
         try:
-            confluence_config = ConfluenceConfig.from_env()
+            confluence_config = ConfluenceConfig.from_env(allow_missing_auth=True)
             loaded_confluence_config = confluence_config
             if confluence_config.is_auth_configured():
                 logger.info(

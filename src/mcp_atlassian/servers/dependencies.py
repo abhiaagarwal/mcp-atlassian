@@ -257,7 +257,11 @@ async def get_jira_fetcher(ctx: Context) -> JiraFetcher:
         if isinstance(lifespan_ctx_dict_global, dict)
         else None
     )
-    if app_lifespan_ctx_global and app_lifespan_ctx_global.full_jira_config:
+    if (
+        app_lifespan_ctx_global
+        and app_lifespan_ctx_global.full_jira_config
+        and app_lifespan_ctx_global.full_jira_config.is_auth_configured()
+    ):
         logger.debug(
             "get_jira_fetcher: Using global JiraFetcher from lifespan_context. "
             f"Global config auth_type: {app_lifespan_ctx_global.full_jira_config.auth_type}"
@@ -426,7 +430,11 @@ async def get_confluence_fetcher(ctx: Context) -> ConfluenceFetcher:
         if isinstance(lifespan_ctx_dict_global, dict)
         else None
     )
-    if app_lifespan_ctx_global and app_lifespan_ctx_global.full_confluence_config:
+    if (
+        app_lifespan_ctx_global
+        and app_lifespan_ctx_global.full_confluence_config
+        and app_lifespan_ctx_global.full_confluence_config.is_auth_configured()
+    ):
         logger.debug(
             "get_confluence_fetcher: Using global ConfluenceFetcher from lifespan_context. "
             f"Global config auth_type: {app_lifespan_ctx_global.full_confluence_config.auth_type}"
