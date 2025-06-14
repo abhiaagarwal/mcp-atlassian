@@ -11,7 +11,7 @@ logger = logging.getLogger("mcp-atlassian.utils.environment")
 def get_available_services() -> dict[str, bool | None]:
     """Determine which services are available based on environment variables."""
     confluence_url = os.getenv("CONFLUENCE_URL")
-    confluence_is_setup = False
+    confluence_is_setup = bool(confluence_url)
     if confluence_url:
         is_cloud = is_atlassian_cloud_url(confluence_url)
 
@@ -48,10 +48,17 @@ def get_available_services() -> dict[str, bool | None]:
                 logger.info(
                     "Using Confluence Server/Data Center authentication (PAT or Basic Auth)"
                 )
-    # If confluence_url is not set, confluence_is_setup remains False
+            else:
+                logger.info(
+                    "Confluence URL found without auth credentials; expecting per-request tokens"
+                )
+    else:
+        logger.info(
+            "Confluence is not configured or required environment variables are missing."
+        )
 
     jira_url = os.getenv("JIRA_URL")
-    jira_is_setup = False
+    jira_is_setup = bool(jira_url)
     if jira_url:
         is_cloud = is_atlassian_cloud_url(jira_url)
 
@@ -86,13 +93,11 @@ def get_available_services() -> dict[str, bool | None]:
                 logger.info(
                     "Using Jira Server/Data Center authentication (PAT or Basic Auth)"
                 )
-    # If jira_url is not set, jira_is_setup remains False
-
-    if not confluence_is_setup:
-        logger.info(
-            "Confluence is not configured or required environment variables are missing."
-        )
-    if not jira_is_setup:
+            else:
+                logger.info(
+                    "Jira URL found without auth credentials; expecting per-request tokens"
+                )
+    else:
         logger.info(
             "Jira is not configured or required environment variables are missing."
         )

@@ -635,6 +635,45 @@ async def test_get_issue_with_user_specific_fetcher_in_state(
 
 
 @pytest.mark.anyio
+async def test_get_issue_with_header_token(
+    test_jira_mcp, mock_jira_fetcher, mock_base_jira_config
+):
+    """Token provided via X-Jira header should create user-specific fetcher."""
+    _mock_request = MagicMock(spec=Request)
+    _mock_request.state = MagicMock()
+    _mock_request.state.jira_fetcher = None
+    _mock_request.state.user_jira_pat = "header_token"
+
+    from src.mcp_atlassian.servers.dependencies import (
+        get_jira_fetcher as get_jira_fetcher_real,
+    )
+
+    with (
+        patch(
+            "src.mcp_atlassian.servers.dependencies.get_http_request",
+            return_value=_mock_request,
+        ) as mock_get_http,
+        patch(
+            "src.mcp_atlassian.servers.dependencies.JiraFetcher",
+            return_value=mock_jira_fetcher,
+        ) as mock_fetcher_cls,
+        patch(
+            "src.mcp_atlassian.servers.jira.get_jira_fetcher",
+            side_effect=AsyncMock(wraps=get_jira_fetcher_real),
+        ),
+    ):
+        async with Client(transport=FastMCPTransport(test_jira_mcp)) as client_instance:
+            await client_instance.call_tool(
+                "jira_get_issue",
+                {"issue_key": "HDR-1", "fields": "summary,status"},
+            )
+
+    mock_get_http.assert_called()
+    called_config = mock_fetcher_cls.call_args.kwargs["config"]
+    assert called_config.personal_token == "header_token"
+
+
+@pytest.mark.anyio
 async def test_get_project_versions_tool(jira_client, mock_jira_fetcher):
     """Test the jira_get_project_versions tool returns simplified version list."""
     # Prepare mock raw versions

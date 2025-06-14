@@ -158,6 +158,43 @@ async def get_jira_fetcher(ctx: Context) -> JiraFetcher:
             return request.state.jira_fetcher
         user_auth_type = getattr(request.state, "user_atlassian_auth_type", None)
         logger.debug(f"get_jira_fetcher: User auth type: {user_auth_type}")
+        user_jira_pat = getattr(request.state, "user_jira_pat", None)
+        if user_jira_pat:
+            credentials = {
+                "user_email_context": None,
+                "personal_access_token": user_jira_pat,
+            }
+            lifespan_ctx_dict = ctx.request_context.lifespan_context  # type: ignore
+            app_lifespan_ctx: MainAppContext | None = (
+                lifespan_ctx_dict.get("app_lifespan_context")
+                if isinstance(lifespan_ctx_dict, dict)
+                else None
+            )
+            if not app_lifespan_ctx or not app_lifespan_ctx.full_jira_config:
+                raise ValueError(
+                    "Jira global configuration (URL, SSL) is not available from lifespan context."
+                )
+            logger.info("Creating user-specific JiraFetcher (token header)")
+            user_specific_config = _create_user_config_for_fetcher(
+                base_config=app_lifespan_ctx.full_jira_config,
+                auth_type="pat",
+                credentials=credentials,
+            )
+            try:
+                user_jira_fetcher = JiraFetcher(config=user_specific_config)
+                current_user_id = user_jira_fetcher.get_current_user_account_id()
+                logger.debug(
+                    f"get_jira_fetcher: Validated Jira token for user ID: {current_user_id}"
+                )
+                request.state.jira_fetcher = user_jira_fetcher
+                return user_jira_fetcher
+            except Exception as e:
+                logger.error(
+                    f"get_jira_fetcher: Failed to create/validate user-specific JiraFetcher: {e}",
+                    exc_info=True,
+                )
+                raise ValueError(f"Invalid user Jira token or configuration: {e}")
+
         # If OAuth or PAT token is present, create user-specific fetcher
         if user_auth_type in ["oauth", "pat"] and hasattr(
             request.state, "user_atlassian_token"
@@ -220,7 +257,11 @@ async def get_jira_fetcher(ctx: Context) -> JiraFetcher:
         if isinstance(lifespan_ctx_dict_global, dict)
         else None
     )
-    if app_lifespan_ctx_global and app_lifespan_ctx_global.full_jira_config:
+    if (
+        app_lifespan_ctx_global
+        and app_lifespan_ctx_global.full_jira_config
+        and app_lifespan_ctx_global.full_jira_config.is_auth_configured()
+    ):
         logger.debug(
             "get_jira_fetcher: Using global JiraFetcher from lifespan_context. "
             f"Global config auth_type: {app_lifespan_ctx_global.full_jira_config.auth_type}"
@@ -263,6 +304,56 @@ async def get_confluence_fetcher(ctx: Context) -> ConfluenceFetcher:
             return request.state.confluence_fetcher
         user_auth_type = getattr(request.state, "user_atlassian_auth_type", None)
         logger.debug(f"get_confluence_fetcher: User auth type: {user_auth_type}")
+
+        user_confluence_pat = getattr(request.state, "user_confluence_pat", None)
+        if user_confluence_pat:
+            credentials = {
+                "user_email_context": None,
+                "personal_access_token": user_confluence_pat,
+            }
+            lifespan_ctx_dict = ctx.request_context.lifespan_context  # type: ignore
+            app_lifespan_ctx: MainAppContext | None = (
+                lifespan_ctx_dict.get("app_lifespan_context")
+                if isinstance(lifespan_ctx_dict, dict)
+                else None
+            )
+            if not app_lifespan_ctx or not app_lifespan_ctx.full_confluence_config:
+                raise ValueError(
+                    "Confluence global configuration (URL, SSL) is not available from lifespan context."
+                )
+            logger.info("Creating user-specific ConfluenceFetcher (token header)")
+            user_specific_config = _create_user_config_for_fetcher(
+                base_config=app_lifespan_ctx.full_confluence_config,
+                auth_type="pat",
+                credentials=credentials,
+            )
+            try:
+                user_confluence_fetcher = ConfluenceFetcher(config=user_specific_config)
+                current_user_data = user_confluence_fetcher.get_current_user_info()
+                derived_email = (
+                    current_user_data.get("email") if isinstance(current_user_data, dict) else None
+                )
+                display_name = (
+                    current_user_data.get("displayName") if isinstance(current_user_data, dict) else None
+                )
+                logger.debug(
+                    f"get_confluence_fetcher: Validated Confluence token. User context: Email='{derived_email}', DisplayName='{display_name}'"
+                )
+                request.state.confluence_fetcher = user_confluence_fetcher
+                if (
+                    derived_email
+                    and current_user_data
+                    and isinstance(current_user_data, dict)
+                    and current_user_data.get("email")
+                ):
+                    request.state.user_atlassian_email = current_user_data["email"]
+                return user_confluence_fetcher
+            except Exception as e:
+                logger.error(
+                    f"get_confluence_fetcher: Failed to create/validate user-specific ConfluenceFetcher: {e}"
+                )
+                raise ValueError(f"Invalid user Confluence token or configuration: {e}")
+
         if user_auth_type in ["oauth", "pat"] and hasattr(
             request.state, "user_atlassian_token"
         ):
@@ -339,7 +430,11 @@ async def get_confluence_fetcher(ctx: Context) -> ConfluenceFetcher:
         if isinstance(lifespan_ctx_dict_global, dict)
         else None
     )
-    if app_lifespan_ctx_global and app_lifespan_ctx_global.full_confluence_config:
+    if (
+        app_lifespan_ctx_global
+        and app_lifespan_ctx_global.full_confluence_config
+        and app_lifespan_ctx_global.full_confluence_config.is_auth_configured()
+    ):
         logger.debug(
             "get_confluence_fetcher: Using global ConfluenceFetcher from lifespan_context. "
             f"Global config auth_type: {app_lifespan_ctx_global.full_confluence_config.auth_type}"

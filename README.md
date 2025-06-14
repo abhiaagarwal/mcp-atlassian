@@ -519,6 +519,21 @@ Here's a complete example of setting up multi-user authentication with streamabl
 }
 ```
 
+**Server/Data Center with Separate Jira/Confluence Tokens**
+```json
+{
+  "mcpServers": {
+    "mcp-atlassian-service": {
+      "url": "http://localhost:9000/mcp",
+      "headers": {
+        "X-Jira": "<JIRA_PAT>",
+        "X-Confluence": "<CONFLUENCE_PAT>"
+      }
+    }
+  }
+}
+```
+
 4. Required environment variables in `.env`:
    ```bash
    JIRA_URL=https://your-company.atlassian.net
@@ -532,6 +547,7 @@ Here's a complete example of setting up multi-user authentication with streamabl
 
 > [!NOTE]
 > - The server should have its own fallback authentication configured (e.g., via environment variables for API token, PAT, or its own OAuth setup using --oauth-setup). This is used if a request doesn't include user-specific authentication.
+> - When sending tokens via `X-Jira` and `X-Confluence` headers, only `JIRA_URL` and `CONFLUENCE_URL` need to be set for the server.
 > - **OAuth**: Each user needs their own OAuth access token from your Atlassian OAuth app.
 > - **PAT**: Each user provides their own Personal Access Token.
 > - The server will use the user's token for API calls when provided, falling back to server auth if not

@@ -73,6 +73,21 @@ def test_from_env_missing_server_auth():
             ConfluenceConfig.from_env()
 
 
+def test_from_env_allow_missing_server_auth():
+    """Server URL without credentials should succeed when allow_missing_auth."""
+    with patch.dict(
+        os.environ,
+        {
+            "CONFLUENCE_URL": "https://confluence.example.com",
+        },
+        clear=True,
+    ):
+        cfg = ConfluenceConfig.from_env(allow_missing_auth=True)
+        assert cfg.url == "https://confluence.example.com"
+        assert cfg.auth_type == "token"
+        assert cfg.personal_token is None
+
+
 def test_is_cloud():
     """Test that is_cloud property returns correct value."""
     # Arrange & Act - Cloud URL

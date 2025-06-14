@@ -47,30 +47,30 @@ async def main_lifespan(app: FastMCP[MainAppContext]) -> AsyncIterator[dict]:
 
     if services.get("jira"):
         try:
-            jira_config = JiraConfig.from_env()
+            jira_config = JiraConfig.from_env(allow_missing_auth=True)
+            loaded_jira_config = jira_config
             if jira_config.is_auth_configured():
-                loaded_jira_config = jira_config
                 logger.info(
                     "Jira configuration loaded and authentication is configured."
                 )
             else:
-                logger.warning(
-                    "Jira URL found, but authentication is not fully configured. Jira tools will be unavailable."
+                logger.info(
+                    "Jira configuration loaded without authentication; expecting request-specific tokens"
                 )
         except Exception as e:
             logger.error(f"Failed to load Jira configuration: {e}", exc_info=True)
 
     if services.get("confluence"):
         try:
-            confluence_config = ConfluenceConfig.from_env()
+            confluence_config = ConfluenceConfig.from_env(allow_missing_auth=True)
+            loaded_confluence_config = confluence_config
             if confluence_config.is_auth_configured():
-                loaded_confluence_config = confluence_config
                 logger.info(
                     "Confluence configuration loaded and authentication is configured."
                 )
             else:
-                logger.warning(
-                    "Confluence URL found, but authentication is not fully configured. Confluence tools will be unavailable."
+                logger.info(
+                    "Confluence configuration loaded without authentication; expecting request-specific tokens"
                 )
         except Exception as e:
             logger.error(f"Failed to load Confluence configuration: {e}", exc_info=True)
@@ -281,6 +281,21 @@ class UserTokenMiddleware(BaseHTTPMiddleware):
                 logger.debug(
                     f"No Authorization header provided for {request.url.path}. Will proceed with global/fallback server configuration if applicable."
                 )
+
+            jira_header = request.headers.get("X-Jira")
+            confluence_header = request.headers.get("X-Confluence")
+            if jira_header:
+                masked = mask_sensitive(jira_header)
+                logger.debug(
+                    f"UserTokenMiddleware.dispatch: X-Jira header detected (masked): {masked}"
+                )
+                request.state.user_jira_pat = jira_header.strip()
+            if confluence_header:
+                masked = mask_sensitive(confluence_header)
+                logger.debug(
+                    f"UserTokenMiddleware.dispatch: X-Confluence header detected (masked): {masked}"
+                )
+                request.state.user_confluence_pat = confluence_header.strip()
         response = await call_next(request)
         logger.debug(
             f"UserTokenMiddleware.dispatch: EXITED for request path='{request.url.path}'"

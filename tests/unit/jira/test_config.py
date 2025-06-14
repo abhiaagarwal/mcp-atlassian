@@ -95,6 +95,21 @@ def test_from_env_missing_server_auth():
             JiraConfig.from_env()
 
 
+def test_from_env_allow_missing_server_auth():
+    """Server URL without credentials should succeed when allow_missing_auth."""
+    with patch.dict(
+        os.environ,
+        {
+            "JIRA_URL": "https://jira.example.com",
+        },
+        clear=True,
+    ):
+        cfg = JiraConfig.from_env(allow_missing_auth=True)
+        assert cfg.url == "https://jira.example.com"
+        assert cfg.auth_type == "pat"
+        assert cfg.personal_token is None
+
+
 def test_is_cloud():
     """Test that is_cloud property returns correct value."""
     # Arrange & Act - Cloud URL

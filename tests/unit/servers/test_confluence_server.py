@@ -552,6 +552,45 @@ async def test_get_page_with_user_specific_fetcher_in_state(
 
 
 @pytest.mark.anyio
+async def test_get_page_with_header_token(
+    test_confluence_mcp, mock_confluence_fetcher
+):
+    """Token provided via X-Confluence header should create user-specific fetcher."""
+    _mock_request = MagicMock(spec=Request)
+    _mock_request.state = MagicMock()
+    _mock_request.state.confluence_fetcher = None
+    _mock_request.state.user_confluence_pat = "header_token"
+
+    from src.mcp_atlassian.servers.dependencies import (
+        get_confluence_fetcher as get_confluence_fetcher_real,
+    )
+
+    with (
+        patch(
+            "src.mcp_atlassian.servers.dependencies.get_http_request",
+            return_value=_mock_request,
+        ) as mock_get_http,
+        patch(
+            "src.mcp_atlassian.servers.dependencies.ConfluenceFetcher",
+            return_value=mock_confluence_fetcher,
+        ) as mock_fetcher_cls,
+        patch(
+            "src.mcp_atlassian.servers.confluence.get_confluence_fetcher",
+            side_effect=AsyncMock(wraps=get_confluence_fetcher_real),
+        ),
+    ):
+        async with Client(transport=FastMCPTransport(test_confluence_mcp)) as client_instance:
+            await client_instance.call_tool(
+                "confluence_get_page",
+                {"page_id": "123"},
+            )
+
+    mock_get_http.assert_called()
+    called_config = mock_fetcher_cls.call_args.kwargs["config"]
+    assert called_config.personal_token == "header_token"
+
+
+@pytest.mark.anyio
 async def test_get_page_by_title_and_space_key(client, mock_confluence_fetcher):
     """Test get_page tool with title and space_key lookup."""
     mock_page = MagicMock(spec=ConfluencePage)

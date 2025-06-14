@@ -51,14 +51,20 @@ class ConfluenceConfig:
         return self.ssl_verify
 
     @classmethod
-    def from_env(cls) -> "ConfluenceConfig":
+    def from_env(cls, allow_missing_auth: bool = False) -> "ConfluenceConfig":
         """Create configuration from environment variables.
+
+        Args:
+            allow_missing_auth: When ``True`` do not raise an error if
+                authentication credentials are missing. This supports
+                scenarios where tokens are provided via request headers.
 
         Returns:
             ConfluenceConfig with values from environment variables
 
         Raises:
-            ValueError: If any required environment variable is missing
+            ValueError: If any required environment variable is missing and
+                ``allow_missing_auth`` is ``False``
         """
         url = os.getenv("CONFLUENCE_URL")
         if not url:
@@ -83,8 +89,13 @@ class ConfluenceConfig:
         elif is_cloud:
             if username and api_token:
                 auth_type = "basic"
+            elif allow_missing_auth:
+                auth_type = "basic"
             else:
-                error_msg = "Cloud authentication requires CONFLUENCE_USERNAME and CONFLUENCE_API_TOKEN, or OAuth configuration"
+                error_msg = (
+                    "Cloud authentication requires CONFLUENCE_USERNAME and CONFLUENCE_API_TOKEN, "
+                    "or OAuth configuration"
+                )
                 raise ValueError(error_msg)
         else:  # Server/Data Center
             if personal_token:
@@ -92,8 +103,13 @@ class ConfluenceConfig:
             elif username and api_token:
                 # Allow basic auth for Server/DC too
                 auth_type = "basic"
+            elif allow_missing_auth:
+                auth_type = "token"
             else:
-                error_msg = "Server/Data Center authentication requires CONFLUENCE_PERSONAL_TOKEN or CONFLUENCE_USERNAME and CONFLUENCE_API_TOKEN"
+                error_msg = (
+                    "Server/Data Center authentication requires CONFLUENCE_PERSONAL_TOKEN or "
+                    "CONFLUENCE_USERNAME and CONFLUENCE_API_TOKEN"
+                )
                 raise ValueError(error_msg)
 
         # SSL verification (for Server/DC)
